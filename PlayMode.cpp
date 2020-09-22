@@ -11,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include <time.h>
 
 GLuint balance_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > balance_meshes(LoadTagDefault, []() -> MeshBuffer const * {
@@ -177,8 +178,15 @@ void PlayMode::update(float elapsed) {
 		ball->position = glm::vec3(0.0f, 0.0f, 2.0f);
 		ball_acc = glm::vec3(0.0f, 0.0f, 0.0f);
 		ball_vel = glm::vec3(0.0f, 0.0f, 0.0f);
+		wind = glm::vec2(0.0f, 0.0f);
 		on_board = true;
 		restart = false;
+	}
+	else {
+		wind.x += (rand() / (float)RAND_MAX - 0.5f) * 10.0f * elapsed;
+		wind.y += (rand() / (float)RAND_MAX - 0.5f) * 10.0f * elapsed;
+		wind.x = std::max(-5.0f, std::min(5.0f, wind.x));
+		wind.y = std::max(-5.0f, std::min(5.0f, wind.y));
 	}
 
 	// rotate board
@@ -202,7 +210,7 @@ void PlayMode::update(float elapsed) {
 	if (std::abs(dist - 2.0f) > 0.01f) touching_board = false;
 
 	// roll ball
-	ball_acc = glm::vec3(0.0f, 0.0f, -9.8f);
+	ball_acc = glm::vec3(wind.x, wind.y, -9.8f);
 	if (on_board && touching_board) {
 		ball_acc += norm * 9.8f * std::cos(board_rotation.x) * std::cos(board_rotation.y);
 	}
@@ -270,27 +278,34 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*camera);
 
-	//{ //use DrawLines to overlay some text:
-	//	glDisable(GL_DEPTH_TEST);
-	//	float aspect = float(drawable_size.x) / float(drawable_size.y);
-	//	DrawLines lines(glm::mat4(
-	//		1.0f / aspect, 0.0f, 0.0f, 0.0f,
-	//		0.0f, 1.0f, 0.0f, 0.0f,
-	//		0.0f, 0.0f, 1.0f, 0.0f,
-	//		0.0f, 0.0f, 0.0f, 1.0f
-	//	));
+	{ //use DrawLines to overlay some text:
+		glDisable(GL_DEPTH_TEST);
+		float aspect = float(drawable_size.x) / float(drawable_size.y);
+		DrawLines lines(glm::mat4(
+			1.0f / aspect, 0.0f, 0.0f, 0.0f,
+			0.0f, 1.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 1.0f
+		));
 
-	//	constexpr float H = 0.09f;
-	//	lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-	//		glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-	//		glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-	//		glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-	//	float ofs = 2.0f / drawable_size.y;
-	//	lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-	//		glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-	//		glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-	//		glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	//}
+		/*constexpr float H = 0.09f;
+		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+			glm::vec3(-aspect + 0.1f * H, 1.0 - 1.1f * H, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		float ofs = 2.0f / drawable_size.y;
+		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+			glm::vec3(-aspect + 0.1f * H + ofs, 1.0 - 1.1f * H + ofs, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0xff, 0xff, 0xff, 0x00));*/
 
-
+		// draw wind
+		lines.draw(glm::vec3(-0.1f, 0.7f, 0.0f), glm::vec3(-0.1f, 0.9f, 0.0f), glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		lines.draw(glm::vec3(-0.1f, 0.7f, 0.0f), glm::vec3(0.1f, 0.7f, 0.0f), glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		lines.draw(glm::vec3(0.1f, 0.9f, 0.0f), glm::vec3(-0.1f, 0.9f, 0.0f), glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		lines.draw(glm::vec3(0.1f, 0.7f, 0.0f), glm::vec3(0.1f, 0.9f, 0.0f), glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		glm::vec3 center = glm::vec3(0.0f, 0.8f, 0.0f);
+		glm::vec3 wind_vec = glm::vec3(wind.x / 50.0f, wind.y / 50.0f, 0.0f);
+		lines.draw(center, center + wind_vec, glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+	}
 }
