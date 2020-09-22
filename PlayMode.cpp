@@ -38,20 +38,6 @@ Load< Scene > balance_scene(LoadTagDefault, []() -> Scene const * {
 });
 
 PlayMode::PlayMode() : scene(*balance_scene) {
-	//get pointers to leg for convenience:
-	//for (auto &transform : scene.transforms) {
-	//	if (transform.name == "Hip.FL") hip = &transform;
-	//	else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-	//	else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-	//}
-	//if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	//if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	//if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
-
-	//hip_base_rotation = hip->rotation;
-	//upper_leg_base_rotation = upper_leg->rotation;
-	//lower_leg_base_rotation = lower_leg->rotation;
-
 	for (auto& transform : scene.transforms) {
 		if (transform.name == "board") board = &transform;
 		else if (transform.name == "ball") ball = &transform;
@@ -74,105 +60,49 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		if (evt.key.keysym.sym == SDLK_ESCAPE) {
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_a) {
+		} else if (evt.key.keysym.sym == SDLK_LEFT) {
 			left.downs += 1;
 			left.pressed = true;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_d) {
+		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
 			right.downs += 1;
 			right.pressed = true;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_w) {
+		} else if (evt.key.keysym.sym == SDLK_UP) {
 			up.downs += 1;
 			up.pressed = true;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
+		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.downs += 1;
 			down.pressed = true;
 			return true;
-		}
-		else if (evt.key.keysym.sym == SDLK_r) {
+		} else if (evt.key.keysym.sym == SDLK_r) {
 			restart = true;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_w) {
+			no_wind = !no_wind;
 			return true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
-		if (evt.key.keysym.sym == SDLK_a) {
+		if (evt.key.keysym.sym == SDLK_LEFT) {
 			left.pressed = false;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_d) {
+		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
 			right.pressed = false;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_w) {
+		} else if (evt.key.keysym.sym == SDLK_UP) {
 			up.pressed = false;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
+		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.pressed = false;
 			return true;
 		}
 	}
-	/*else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
-		}
-	} else if (evt.type == SDL_MOUSEMOTION) {
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
-			return true;
-		}
-	}*/
 
 	return false;
 }
 
 void PlayMode::update(float elapsed) {
-
-	//slowly rotates through [0,1):
-	//wobble += elapsed / 10.0f;
-	//wobble -= std::floor(wobble);
-
-	//hip->rotation = hip_base_rotation * glm::angleAxis(
-	//	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-	//	glm::vec3(0.0f, 1.0f, 0.0f)
-	//);
-	//upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-	//	glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-	//	glm::vec3(0.0f, 0.0f, 1.0f)
-	//);
-	//lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-	//	glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-	//	glm::vec3(0.0f, 0.0f, 1.0f)
-	//);
-
-	//move camera:
-	//{
-
-		//combine inputs into a move:
-		//constexpr float PlayerSpeed = 30.0f;
-		//glm::vec2 move = glm::vec2(0.0f);
-		//if (left.pressed && !right.pressed) move.x =-1.0f;
-		//if (!left.pressed && right.pressed) move.x = 1.0f;
-		//if (down.pressed && !up.pressed) move.y =-1.0f;
-		//if (!down.pressed && up.pressed) move.y = 1.0f;
-
-		////make it so that moving diagonally doesn't go faster:
-		//if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
-
-		//glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		//glm::vec3 right = frame[0];
-		////glm::vec3 up = frame[1];
-		//glm::vec3 forward = -frame[2];
-
-		//camera->transform->position += move.x * right + move.y * forward;
-	//}
 	if (restart) {
 		board_rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 		ball->position = glm::vec3(0.0f, 0.0f, 2.0f);
@@ -183,10 +113,13 @@ void PlayMode::update(float elapsed) {
 		restart = false;
 	}
 	else {
-		wind.x += (rand() / (float)RAND_MAX - 0.5f) * 10.0f * elapsed;
-		wind.y += (rand() / (float)RAND_MAX - 0.5f) * 10.0f * elapsed;
-		wind.x = std::max(-5.0f, std::min(5.0f, wind.x));
-		wind.y = std::max(-5.0f, std::min(5.0f, wind.y));
+		if (no_wind) wind = glm::vec2(0.0f, 0.0f);
+		else {
+			wind.x += (rand() / (float)RAND_MAX - 0.5f) * 10.0f * elapsed;
+			wind.y += (rand() / (float)RAND_MAX - 0.5f) * 10.0f * elapsed;
+			wind.x = std::max(-6.0f, std::min(6.0f, wind.x));
+			wind.y = std::max(-6.0f, std::min(6.0f, wind.y));
+		}
 	}
 
 	// rotate board
@@ -305,7 +238,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		lines.draw(glm::vec3(0.1f, 0.9f, 0.0f), glm::vec3(-0.1f, 0.9f, 0.0f), glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		lines.draw(glm::vec3(0.1f, 0.7f, 0.0f), glm::vec3(0.1f, 0.9f, 0.0f), glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 		glm::vec3 center = glm::vec3(0.0f, 0.8f, 0.0f);
-		glm::vec3 wind_vec = glm::vec3(wind.x / 50.0f, wind.y / 50.0f, 0.0f);
+		glm::vec3 wind_vec = glm::vec3(wind.x / 60.0f, wind.y / 60.0f, 0.0f);
 		lines.draw(center, center + wind_vec, glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 	}
 }

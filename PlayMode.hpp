@@ -48,6 +48,7 @@ struct PlayMode : Mode {
 	glm::vec3 ball_vel = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	glm::vec2 wind = glm::vec2(0.0f, 0.0f);
+	bool no_wind = false;
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
