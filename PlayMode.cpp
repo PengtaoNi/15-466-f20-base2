@@ -12,23 +12,23 @@
 
 #include <random>
 
-GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
-	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+GLuint balance_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > balance_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+	MeshBuffer const *ret = new MeshBuffer(data_path("balance.pnct"));
+	balance_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
-Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
+Load< Scene > balance_scene(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("balance.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = balance_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 
-		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+		drawable.pipeline.vao = balance_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -36,20 +36,28 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-PlayMode::PlayMode() : scene(*hexapod_scene) {
+PlayMode::PlayMode() : scene(*balance_scene) {
 	//get pointers to leg for convenience:
-	for (auto &transform : scene.transforms) {
-		if (transform.name == "Hip.FL") hip = &transform;
-		else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-		else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-	}
-	if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
+	//for (auto &transform : scene.transforms) {
+	//	if (transform.name == "Hip.FL") hip = &transform;
+	//	else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
+	//	else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
+	//}
+	//if (hip == nullptr) throw std::runtime_error("Hip not found.");
+	//if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
+	//if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
 
-	hip_base_rotation = hip->rotation;
-	upper_leg_base_rotation = upper_leg->rotation;
-	lower_leg_base_rotation = lower_leg->rotation;
+	//hip_base_rotation = hip->rotation;
+	//upper_leg_base_rotation = upper_leg->rotation;
+	//lower_leg_base_rotation = lower_leg->rotation;
+
+	for (auto& transform : scene.transforms) {
+		if (transform.name == "board") board = &transform;
+		else if (transform.name == "ball") ball = &transform;
+	}
+
+	if (board == nullptr) throw std::runtime_error("board not found.");
+	if (ball == nullptr) throw std::runtime_error("ball not found.");
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
@@ -82,6 +90,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = true;
 			return true;
 		}
+		else if (evt.key.keysym.sym == SDLK_r) {
+			restart = true;
+			return true;
+		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
 			left.pressed = false;
@@ -96,7 +108,8 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = false;
 			return true;
 		}
-	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
+	}
+	/*else if (evt.type == SDL_MOUSEBUTTONDOWN) {
 		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
 			SDL_SetRelativeMouseMode(SDL_TRUE);
 			return true;
@@ -114,7 +127,7 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			);
 			return true;
 		}
-	}
+	}*/
 
 	return false;
 }
@@ -122,42 +135,108 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void PlayMode::update(float elapsed) {
 
 	//slowly rotates through [0,1):
-	wobble += elapsed / 10.0f;
-	wobble -= std::floor(wobble);
+	//wobble += elapsed / 10.0f;
+	//wobble -= std::floor(wobble);
 
-	hip->rotation = hip_base_rotation * glm::angleAxis(
-		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
+	//hip->rotation = hip_base_rotation * glm::angleAxis(
+	//	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
+	//	glm::vec3(0.0f, 1.0f, 0.0f)
+	//);
+	//upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
+	//	glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
+	//	glm::vec3(0.0f, 0.0f, 1.0f)
+	//);
+	//lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
+	//	glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
+	//	glm::vec3(0.0f, 0.0f, 1.0f)
+	//);
 
 	//move camera:
-	{
+	//{
 
 		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
-		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
-		if (!down.pressed && up.pressed) move.y = 1.0f;
+		//constexpr float PlayerSpeed = 30.0f;
+		//glm::vec2 move = glm::vec2(0.0f);
+		//if (left.pressed && !right.pressed) move.x =-1.0f;
+		//if (!left.pressed && right.pressed) move.x = 1.0f;
+		//if (down.pressed && !up.pressed) move.y =-1.0f;
+		//if (!down.pressed && up.pressed) move.y = 1.0f;
 
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
+		////make it so that moving diagonally doesn't go faster:
+		//if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
 
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 right = frame[0];
-		//glm::vec3 up = frame[1];
-		glm::vec3 forward = -frame[2];
+		//glm::mat4x3 frame = camera->transform->make_local_to_parent();
+		//glm::vec3 right = frame[0];
+		////glm::vec3 up = frame[1];
+		//glm::vec3 forward = -frame[2];
 
-		camera->transform->position += move.x * right + move.y * forward;
+		//camera->transform->position += move.x * right + move.y * forward;
+	//}
+	if (restart) {
+		board_rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+		ball->position = glm::vec3(0.0f, 0.0f, 2.0f);
+		ball_acc = glm::vec3(0.0f, 0.0f, 0.0f);
+		ball_vel = glm::vec3(0.0f, 0.0f, 0.0f);
+		on_board = true;
+		restart = false;
+	}
+
+	// rotate board
+	if (left.pressed && !right.pressed) board_rotation.y -= elapsed;
+	if (!left.pressed && right.pressed) board_rotation.y += elapsed;
+	if (!down.pressed && up.pressed) board_rotation.x -= elapsed;
+	if (down.pressed && !up.pressed) board_rotation.x += elapsed;
+	board_rotation.x = std::max(-float(M_PI) / 4.0f, std::min(float(M_PI) / 4.0f, board_rotation.x));
+	board_rotation.y = std::max(-float(M_PI) / 4.0f, std::min(float(M_PI) / 4.0f, board_rotation.y));
+	board->rotation = board_rotation;
+
+	// check if ball is touching board
+	bool touching_board = true;
+	glm::vec3 old_pos = ball->position;
+	glm::vec3 norm = glm::vec3(0.0f, 0.0f, 0.0f);
+	norm.x = std::sin(board_rotation.y) * std::cos(board_rotation.x);
+	norm.y = -std::sin(board_rotation.x) * std::cos(board_rotation.y);
+	norm.z = std::cos(board_rotation.x) * std::cos(board_rotation.y);
+	norm = glm::normalize(norm);
+	float dist = old_pos.x * norm.x + old_pos.y * norm.y + old_pos.z * norm.z;
+	if (std::abs(dist - 2.0f) > 0.01f) touching_board = false;
+
+	// roll ball
+	ball_acc = glm::vec3(0.0f, 0.0f, -9.8f);
+	if (on_board && touching_board) {
+		ball_acc += norm * 9.8f * std::cos(board_rotation.x) * std::cos(board_rotation.y);
+	}
+	ball_vel += ball_acc * elapsed;
+	ball->position += ball_vel * elapsed;
+
+	// check if ball is out of board
+	glm::vec3 ball_proj = ball->position - dist * norm;
+	if (std::abs(ball_proj.x) > 10.0f * std::cos(board_rotation.y) ||
+		std::abs(ball_proj.y) > 10.0f * std::cos(board_rotation.x)) {
+		on_board = false;
+	}
+
+	// make sure ball doesn't go through board
+	dist = ball->position.x * norm.x + ball->position.y * norm.y + ball->position.z * norm.z;
+	if (on_board) {
+		if (dist < 2.0f) ball->position += norm * (2.0f - dist);
+	}
+	else {
+		// on edge
+		if (dist >= 0 &&
+			std::abs(ball_proj.x) > 10.0f * std::cos(board_rotation.y) && 
+			std::abs(ball_proj.x) < 11.0f * std::cos(board_rotation.y)) {
+			float out_dist = std::abs(ball_proj.x) / std::cos(board_rotation.y) - 10.0f;
+			float true_dist = 1.0f + std::sqrt(1.0f - out_dist * out_dist);
+			if (dist < true_dist) ball->position += norm * (true_dist - dist);
+		}
+		else if (dist >= 0 &&
+			     std::abs(ball_proj.y) > 10.0f * std::cos(board_rotation.x) &&
+			     std::abs(ball_proj.y) < 11.0f * std::cos(board_rotation.x)) {
+			float out_dist = std::abs(ball_proj.y) / std::cos(board_rotation.x) - 10.0f;
+			float true_dist = 1.0f + std::sqrt(1.0f - out_dist * out_dist);
+			if (dist < true_dist) ball->position += norm * (true_dist - dist);
+		}
 	}
 
 	//reset button press counters:
@@ -191,25 +270,27 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*camera);
 
-	{ //use DrawLines to overlay some text:
-		glDisable(GL_DEPTH_TEST);
-		float aspect = float(drawable_size.x) / float(drawable_size.y);
-		DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
+	//{ //use DrawLines to overlay some text:
+	//	glDisable(GL_DEPTH_TEST);
+	//	float aspect = float(drawable_size.x) / float(drawable_size.y);
+	//	DrawLines lines(glm::mat4(
+	//		1.0f / aspect, 0.0f, 0.0f, 0.0f,
+	//		0.0f, 1.0f, 0.0f, 0.0f,
+	//		0.0f, 0.0f, 1.0f, 0.0f,
+	//		0.0f, 0.0f, 0.0f, 1.0f
+	//	));
 
-		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	}
+	//	constexpr float H = 0.09f;
+	//	lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+	//		glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
+	//		glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+	//		glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+	//	float ofs = 2.0f / drawable_size.y;
+	//	lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+	//		glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+	//		glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+	//		glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+	//}
+
+
 }
